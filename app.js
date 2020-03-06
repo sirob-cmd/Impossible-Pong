@@ -12,13 +12,13 @@ const player = {
     width: 15,
     height: 100,
     radius: 8,
-    draw: function() {
+    draw: function () {
         context.beginPath();
         context.rect(this.x, this.y, this.width, this.height);
-        context.fillStyle = "yellow";
+        context.fillStyle = "green";
         context.fill();
         context.closePath();
-      },
+    },
 }
 
 canvas.addEventListener('mousemove', (e) => {
@@ -32,8 +32,8 @@ const pc = {
     y: canvas.height / 2 - 40,
     width: 15,
     height: 100,
-
-    draw: function() {
+    speed: 15,
+    draw: function () {
         context.beginPath();
         context.rect(this.x, this.y, this.width, this.height);
         context.fillStyle = "red";
@@ -41,9 +41,19 @@ const pc = {
         context.closePath();
     },
 
-    move: function(){
-        this.y = ball.y - this.height / 2
+    move: function () {
+        // this.y = ball.y - this.height / 2
+        // (AI)
+        if (this.y > ball.y - (this.height / 2)) {
+            if (ball.velX === 4) this.y -= this.speed / 2;
+            else this.y -= this.speed / 4;
+        }
+        if (this.y < ball.y - (this.height / 2)) {
+            if (ball.velX === 4) this.y += this.speed / 2;
+            else this.y += this.speed / 4;
+        }
     }
+
 }
 
 // ball
@@ -56,14 +66,14 @@ const ball = {
     velX: 5,
     velY: 5,
     speed: 7,
-    draw: function() {
+    draw: function () {
         context.beginPath();
-        context.arc(this.x, this.y, 10, 0, Math.PI*2);
-        context.fillStyle = "#0095DD";
+        context.arc(this.x, this.y, 10, 0, Math.PI * 2);
+        context.fillStyle = "white";
         context.fill();
     },
 
-    move: function(){
+    move: function () {
         this.y += this.velY
         this.x -= this.velX
 
@@ -73,18 +83,23 @@ const ball = {
         }
     }
 }
- 
-// reset the ball when u figure out how to detect if ball is not hitting the paddles
-function resetGame(){
-    ball.speed = 7
-    ball.velX= 5
-    ball.velY= 5
-    ball.x = canvas.width / 2
-    ball.y = canvas.height / 2
+
+const net = {
+    x: canvas.width / 2,
+    y: 0,
+    height: 10,
+    width: 2,
+    draw: function () {
+        for (let i = 0; i <= canvas.height; i += 15) {
+            context.fillRect(this.x, this.y + i, this.width, this.height);
+            context.fillStyle = "white"
+            context.fill()
+        }
+    },
 }
 
 // collision with PC
-function collision(b, paddle){
+function collision(b, paddle) {
     let pcL = paddle.x
     let pcT = paddle.y
     let pcB = paddle.y + paddle.height
@@ -95,51 +110,60 @@ function collision(b, paddle){
     let bT = b.y - b.radius
     let bB = b.y + b.radius
 
-    return bR > pcL && bT < pcB && bL < pcR && bB > pcT 
-    
+    return bR > pcL && bT < pcB && bL < pcR && bB > pcT
+}
+
+function cdcall() {
+    if (collision(ball, pc)) {
+        ball.velX = -ball.velX
+    }
+
+    if (collision(ball, player)) {
+        let collidePoint = (ball.y - (player.y + player.height / 2));
+        collidePoint = collidePoint / (player.height / 2);
+        let angleRad = (Math.PI / 4) * collidePoint;
+
+        // change the X and Y velocity direction
+        ball.velX = -(ball.speed * Math.cos(angleRad));
+        ball.velY = ball.speed * Math.sin(angleRad);
+
+        ball.speed += 1;
+        pc.speed += 0.5
+    }
+}
+
+// reset the ball when u figure out how to detect if ball is not hitting the paddles
+function resetGame() {
+    pc.speed = 15
+    ball.speed = 7
+    ball.velX = 5
+    ball.velY = 5
+    ball.x = canvas.width / 2
+    ball.y = canvas.height / 2
 }
 
 // point system
-function points(){
+function points() {
 
     let pcPoint = ball.x - ball.radius < 0
     let playerPoint = ball.x + ball.width > canvas.width
 
-    if(pcPoint){
+    if (pcPoint) {
         pc.pcScoreTracker++
         pcScore.textContent = pc.pcScoreTracker
         resetGame()
-    } else if (playerPoint){
+    } else if (playerPoint) {
         player.playerScoreTracker++
         playerScore.textContent = player.playerScoreTracker
         resetGame()
     }
 }
-   
+
 
 // update Game
 function update() {
     context.fillStyle = "black";
     context.fillRect(0, 0, canvas.width, canvas.height);
-
-    if(collision(ball, pc)){
-        ball.velX = -ball.velX
-    }
-
-    if(collision(ball, player)){
-        let collidePoint = (ball.y - (player.y + player.height / 2));
-        collidePoint = collidePoint / (player.height / 2);
-        let angleRad = (Math.PI/4) * collidePoint;
-        
-        // change the X and Y velocity direction
-        ball.velX = -(ball.speed * Math.cos(angleRad));
-        ball.velY = ball.speed * Math.sin(angleRad);
-        
-        ball.speed += 1;
-    }
-
-    // point function
-    points()
 
     // player
     player.draw()
@@ -152,7 +176,10 @@ function update() {
     ball.draw()
     ball.move()
 
-
+    // Game
+    cdcall()
+    points()
+    net.draw()
 
     requestAnimationFrame(update)
 }
